@@ -26,6 +26,7 @@ app.post("/webhook", async (req, res) => {
   const text = msg.text?.body?.trim();
 
   const state = userState.get(from);
+  
 
   if (!state) {
     userState.set(from, "WAITING_SERVICE");
