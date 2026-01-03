@@ -1,6 +1,6 @@
-const axios = require("axios");
+import axios from "axios";
 
-module.exports = async (to, body) => {
+export default async function sendMessage(to, body) {
   await axios.post(
     `https://graph.facebook.com/v19.0/${process.env.PHONE_NUMBER_ID}/messages`,
     {
@@ -15,4 +15,4 @@ module.exports = async (to, body) => {
       }
     }
   );
-};
+}

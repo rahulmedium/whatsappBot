@@ -1,8 +1,8 @@
-const express = require("express");
-const axios = require("axios");
-const services = require("./services");
-const userState = require("./userState");
-const sendMessage = require("./sendMessage");
+import express from "express";
+import axios from "axios";
+import {services} from "./services.js";
+import userState from "./userState.js";
+import sendMessage from "./sendMessage.js";
 const app = express();
 app.use(express.json());
 
@@ -30,7 +30,7 @@ app.post("/webhook", async (req, res) => {
 
   if (!state) {
     userState.set(from, "WAITING_SERVICE");
-    return sendMessage(from,
+    return sendMessage1(from,
 `🙏 Welcome to Nirala Life
 Please choose a service:
 1️⃣ Yoga
@@ -40,13 +40,13 @@ Please choose a service:
 
   if (state === "WAITING_SERVICE" && services[text]) {
     userState.set(from, "DONE");
-    return sendMessage(from, services[text].reply);
+    return sendMessage1(from, services[text].reply);
   }
 
-  return sendMessage(from, "❌ Please reply with 1, 2 or 3");
+  return sendMessage1(from, "❌ Please reply with 1, 2 or 3");
 });
 
-async function sendMessage(to, body) {
+async function sendMessage1(to, body) {
   await axios.post(
     `https://graph.facebook.com/v19.0/${PHONE_ID}/messages`,
     {
