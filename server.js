@@ -9,7 +9,7 @@ const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 
 app.post("/send", async (req, res) => {
     getPhoneNumbers().catch(console.error);
-     sendMenuMessage("917070702001");
+     sendMenuMessage("918527871394");
 //   try {
 //     sendMenuMessage("918527871394");
 //     const response = await fetch(

@@ -62,15 +62,9 @@ async function sendMessage1(to, body) {
 }
 app.post("/send", async (req, res) => {
   const { phone } = req.body;
+  console.log("Sending menu to:", phone);
 
-  await sendMessage(
-    phone,
-`🙏 Welcome to Nirala Life
-Please choose a service:
-1️⃣ Yoga
-2️⃣ Diet Plan
-3️⃣ Consultation`
-  );
+  await sendMessage(phone);
 
   res.json({ success: true });
 });
