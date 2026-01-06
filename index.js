@@ -85,12 +85,21 @@ app.get("/webhook", (req, res) => {
 // ---------- WEBHOOK RECEIVE ----------
 app.post("/webhook", async (req, res) => {
   try {
-    const value = req.body.entry?.[0]?.changes?.[0]?.value;
+    console.log("📩 RAW WEBHOOK:", JSON.stringify(req.body, null, 2));
+
+    const entry = req.body.entry?.[0];
+    const change = entry?.changes?.[0];
+    const value = change?.value;
     const message = value?.messages?.[0];
 
-    if (!message) return res.sendStatus(200);
+    if (!message) {
+      console.log("ℹ️ No message in webhook");
+      return res.sendStatus(200);
+    }
 
     const phone = message.from;
+    console.log("📞 From:", phone);
+    console.log("📨 Type:", message.type);
 
     // INIT USER
     if (!crm[phone]) {
@@ -100,35 +109,40 @@ app.post("/webhook", async (req, res) => {
         lastSeen: Date.now(),
       };
       saveCRM();
+      console.log("👤 New user created");
     }
 
     // ---------- BUTTON CLICK ----------
-    if (message.type === "interactive") {
+    if (
+      message.type === "interactive" &&
+      message.interactive?.type === "button_reply"
+    ) {
       const id = message.interactive.button_reply.id;
+      console.log("🔘 Button clicked:", id);
+
       crm[phone].service = id;
       crm[phone].state = "SERVICE_SELECTED";
       saveCRM();
 
-      if (id === "YOGA")
-        await sendText(phone, "🧘 Yoga plans start at ₹999.\nReply BOOK to continue");
-      if (id === "DIET")
-        await sendText(phone, "🥗 Diet plans for diabetes & weight gain.\nReply BOOK");
-      if (id === "CONSULT")
-        await sendText(phone, "💬 Our expert will contact you soon.");
+      if (id === "YOGA") await sendText(phone, "🧘 Yoga plans start at ₹999.\nReply BOOK");
+      if (id === "DIET") await sendText(phone, "🥗 Diet plans for diabetes.\nReply BOOK");
+      if (id === "CONSULT") await sendText(phone, "💬 Our expert will contact you.");
 
       return res.sendStatus(200);
     }
 
     // ---------- TEXT MESSAGE ----------
     if (message.type === "text") {
-      const text = message.text.body.toLowerCase();
+      const text = message.text.body;
+      console.log("💬 Text received:", text);
 
-      // 24-HOUR SESSION LOGIC
       const hours = (Date.now() - crm[phone].lastSeen) / 36e5;
       crm[phone].lastSeen = Date.now();
 
+      console.log("⏱️ Hours since last message:", hours.toFixed(2));
+
       if (hours > 24) {
-        await sendText(phone, "Session expired. Restarting...");
+        console.log("⌛ Session expired");
         await sendMenu(phone);
         crm[phone].state = "MENU";
         saveCRM();
@@ -136,15 +150,15 @@ app.post("/webhook", async (req, res) => {
       }
 
       if (crm[phone].state === "NEW") {
+        console.log("📋 Sending menu");
         await sendMenu(phone);
         crm[phone].state = "MENU";
-      } else if (text.includes("book")) {
-        await sendText(
-          phone,
-          `✅ Booking confirmed for ${crm[phone].service}`
-        );
+      } else if (text.toLowerCase().includes("book")) {
+        console.log("✅ Booking confirmed");
+        await sendText(phone, `✅ Booking confirmed for ${crm[phone].service}`);
         crm[phone].state = "BOOKED";
       } else {
+        console.log("🔁 Resending menu");
         await sendMenu(phone);
       }
 
@@ -153,10 +167,11 @@ app.post("/webhook", async (req, res) => {
 
     res.sendStatus(200);
   } catch (err) {
-    console.error("Webhook Error:", err);
+    console.error("❌ WEBHOOK ERROR:", err.response?.data || err.message);
     res.sendStatus(500);
   }
 });
+
 // ---------- MANUAL SEND API (CRM / POSTMAN) ----------
 app.post("/send", async (req, res) => {
   try {
