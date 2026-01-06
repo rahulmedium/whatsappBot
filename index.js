@@ -122,16 +122,27 @@ async function sendTemplate(to) {
 // WEBHOOK VERIFY
 // ---------------------------
 app.get("/webhook", (req, res) => {
-  if (req.query["hub.verify_token"] === VERIFY_TOKEN) {
-    return res.send(req.query["hub.challenge"]);
+  console.log("VERIFY QUERY:", req.query);
+
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  if (mode === "subscribe" && token === VERIFY_TOKEN) {
+    console.log("✅ WEBHOOK VERIFIED SUCCESSFULLY");
+    return res.status(200).send(challenge);
   }
+
+  console.log("❌ WEBHOOK VERIFICATION FAILED");
   res.sendStatus(403);
 });
+
 
 // ---------------------------
 // WEBHOOK RECEIVE
 // ---------------------------
 app.post("/webhook", async (req, res) => {
+  console.log("📩 INCOMING WEBHOOK:", JSON.stringify(req.body, null, 2));
   try {
     const msg =
       req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
