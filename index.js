@@ -78,7 +78,7 @@ app.get("/webhook",(req,res)=>{
 
     if(mode && token){
 
-        if(mode==="subscribe" && token===mytoken){
+        if(mode==="subscribe" && token===VERIFY_TOKEN){
             res.status(200).send(challange);
         }else{
             res.status(403);
@@ -111,7 +111,7 @@ app.post("/webhook",(req,res)=>{ //i want some
 
                axios({
                    method:"POST",
-                   url:"https://graph.facebook.com/v13.0/"+phon_no_id+"/messages?access_token="+token,
+                   url:"https://graph.facebook.com/v13.0/"+PHONE_ID+"/messages?access_token="+TOKEN,
                    data:{
                        messaging_product:"whatsapp",
                        to:from,
