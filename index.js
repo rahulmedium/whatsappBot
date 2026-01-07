@@ -70,106 +70,72 @@ async function sendMenu(to) {
 }
 
 // ---------- WEBHOOK VERIFY ----------
-app.get("/webhook", (req, res) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
+app.get("/webhook",(req,res)=>{
+   let mode=req.query["hub.mode"];
+   let challange=req.query["hub.challenge"];
+   let token=req.query["hub.verify_token"];
 
-  if (mode === "subscribe" && token === VERIFY_TOKEN) {
-    console.log("✅ Webhook Verified");
-    return res.status(200).send(challenge);
-  }
-  res.sendStatus(403);
+
+    if(mode && token){
+
+        if(mode==="subscribe" && token===mytoken){
+            res.status(200).send(challange);
+        }else{
+            res.status(403);
+        }
+
+    }
+
 });
 
-// ---------- WEBHOOK RECEIVE ----------
-app.post("/webhook", async (req, res) => {
-  try {
-    console.log("📩 RAW WEBHOOK:", JSON.stringify(req.body, null, 2));
+app.post("/webhook",(req,res)=>{ //i want some 
 
-    const entry = req.body.entry?.[0];
-    const change = entry?.changes?.[0];
-    const value = change?.value;
-    const message = value?.messages?.[0];
+    let body_param=req.body;
 
-    if (!message) {
-      console.log("ℹ️ No message in webhook");
-      return res.sendStatus(200);
+    console.log(JSON.stringify(body_param,null,2));
+
+    if(body_param.object){
+        console.log("inside body param");
+        if(body_param.entry && 
+            body_param.entry[0].changes && 
+            body_param.entry[0].changes[0].value.messages && 
+            body_param.entry[0].changes[0].value.messages[0]  
+            ){
+               let phon_no_id=body_param.entry[0].changes[0].value.metadata.phone_number_id;
+               let from = body_param.entry[0].changes[0].value.messages[0].from; 
+               let msg_body = body_param.entry[0].changes[0].value.messages[0].text.body;
+
+               console.log("phone number "+phon_no_id);
+               console.log("from "+from);
+               console.log("boady param "+msg_body);
+
+               axios({
+                   method:"POST",
+                   url:"https://graph.facebook.com/v13.0/"+phon_no_id+"/messages?access_token="+token,
+                   data:{
+                       messaging_product:"whatsapp",
+                       to:from,
+                       text:{
+                           body:"Hi.. I'm Prasath, your message is "+msg_body
+                       }
+                   },
+                   headers:{
+                       "Content-Type":"application/json"
+                   }
+
+               });
+
+               res.sendStatus(200);
+            }else{
+                res.sendStatus(404);
+            }
+
     }
 
-    const phone = message.from;
-    console.log("📞 From:", phone);
-    console.log("📨 Type:", message.type);
+});
 
-    // INIT USER
-    if (!crm[phone]) {
-      crm[phone] = {
-        state: "NEW",
-        service: null,
-        lastSeen: Date.now(),
-      };
-      saveCRM();
-      console.log("👤 New user created");
-    }
-
-    // ---------- BUTTON CLICK ----------
-    if (
-      message.type === "interactive" &&
-      message.interactive?.type === "button_reply"
-    ) {
-      const id = message.interactive.button_reply.id;
-      console.log("🔘 Button clicked:", id);
-
-      crm[phone].service = id;
-      crm[phone].state = "SERVICE_SELECTED";
-      saveCRM();
-
-      if (id === "YOGA") await sendText(phone, "🧘 Yoga plans start at ₹999.\nReply BOOK");
-      if (id === "DIET") await sendText(phone, "🥗 Diet plans for diabetes.\nReply BOOK");
-      if (id === "CONSULT") await sendText(phone, "💬 Our expert will contact you.");
-
-      return res.sendStatus(200);
-    }
-
-    // ---------- TEXT MESSAGE ----------
-    if (message.type === "text") {
-      const text = message.text.body;
-      console.log("💬 Text received:", text);
-
-      const hours = (Date.now() - crm[phone].lastSeen) / 36e5;
-      crm[phone].lastSeen = Date.now();
-
-      console.log("⏱️ Hours since last message:", hours.toFixed(2));
-
-      if (hours > 24) {
-        console.log("⌛ Session expired");
-        await sendMenu(phone);
-        crm[phone].state = "MENU";
-        saveCRM();
-        return res.sendStatus(200);
-      }
-
-      if (crm[phone].state === "NEW") {
-        console.log("📋 Sending menu");
-        await sendMenu(phone);
-        crm[phone].state = "MENU";
-      } else if (text.toLowerCase().includes("book")) {
-        console.log("✅ Booking confirmed");
-        await sendText(phone, `✅ Booking confirmed for ${crm[phone].service}`);
-        crm[phone].state = "BOOKED";
-      } else {
-        console.log("🔁 Resending menu");
-        await sendMenu(phone);
-      }
-
-      saveCRM();
-    }
-
-    res.sendStatus(200);
-  } catch (err) {
-    console.error("❌ WEBHOOK ERROR:", err.response?.data || err.message);
-    res.sendStatus(500);
-  }
+app.get("/",(req,res)=>{
+    res.status(200).send("hello this is webhook setup");
 });
 
 // ---------- MANUAL SEND API (CRM / POSTMAN) ----------
